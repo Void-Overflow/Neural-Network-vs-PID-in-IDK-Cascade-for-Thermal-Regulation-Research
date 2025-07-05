@@ -1,2 +1,2 @@
 # Neural-Network-vs-PID-in-IDK-Cascade-for-Thermal-Regulation-Research
-A Python based application which implements an IDK-Cascade for regulating the temperature of a peltier element, in which the application employs a convolutional neural netowork developed in tensorflow which switches to traditional PID control. This embedded system is written for the Raspberry Pi Zero W and is part of a research paper.
+A Python based application which implements an IDK-Cascade for regulating the temperature of a peltier element at difference confidence intervals, in which the application employs a convolutional neural netowork developed in tensorflow which switches to traditional PID control. This embedded system is written for the Raspberry Pi Zero W and is part of a research paper.
