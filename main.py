@@ -2,37 +2,95 @@
 
 from sensors import TemperatureSensors
 from pid_controller import PIDController
+from research_logger import ResearchLogger
 
 import time
 import RPi.GPIO as GPIO
+import sys
 
-baselineTemp = 30.0
+def overwrite_console(model_type, avg_temp, baseline_temp, duty_cycle, power=None, latency=None, elapsed_time=None, duration_time=None):
+    sys.stdout.write("\033[F" * (2 if power is not None else 1))  # Move cursor up 3 lines if logging
+    sys.stdout.flush()
 
-temp_sensors = TemperatureSensors()
-pid = PIDController(kp=5.0, ki=0.1, kd=1.0, setpoint=baselineTemp)
+    sys.stdout.write(f"\rCurrent Model: {model_type}  Avg Temp: {avg_temp:.2f}°C  "
+                     f"Set Temp: {baseline_temp:.2f}°C  PWM Duty: {duty_cycle:.2f}%     \n")
+    if power is not None and latency is not None:
+        sys.stdout.write(f"Power: {power:.3f} W  Latency: {latency:.2f} ms  Time Elapsed: {elapsed_time:.2f} min / {duration_time:.2f} min    \n")
+    sys.stdout.flush()
 
-mosfet_pin = 12
-GPIO.setwarnings(False)			
-GPIO.setmode(GPIO.BCM)		
-GPIO.setup(mosfet_pin, GPIO.OUT)
-element_pwm = GPIO.PWM(mosfet_pin,1000)
-element_pwm.start(0)		
+
+def get_user_input():
+    print("Available Modes: PID, NN, IDK_0.1, IDK_0.3, IDK_0.5, IDK_0.7, IDK_0.9")
+    model_choice = input("Enter control model: ").strip().upper()
+
+    if not (model_choice == "PID" or model_choice == "NN" or model_choice.startswith("IDK_")):
+        print("Invalid model. Defaulting to PID.")
+        model_choice = "PID"
+
+    try:
+        baseline_temp = float(input("Enter baseline temperature in °C (default = 16): ") or "16")
+    except ValueError:
+        print("Invalid input. Using default 30°C.")
+        baseline_temp = 16.0
+
+    log_choice = input("Do you want to log the the data during this run? (y/n): ").strip().lower()
+    logging_enabled = log_choice == 'y'
+    
+    duration = 45.0
+    if logging_enabled == True:
+        try:
+            duration = float(input("How long would you like the trial to collect data in minutes? (default = 45): ") or "45")
+        except ValueError:
+            print("Invalid input. Using default 45 minutes")
+            duration = 45
+
+    print("\n\n\n")
+
+    return model_choice, baseline_temp, logging_enabled, duration
+
 
 def main():
+    model_type, baselineTemp, logging, duration = get_user_input()
+
+    temp_sensors = TemperatureSensors()
+    pid = PIDController(kp=5.0, ki=0.5, kd=1.0, setpoint=baselineTemp)
+    logger = ResearchLogger(trial_name=model_type, baseline_temp=baselineTemp, log_interval=1.0, duration_minutes=duration) if logging else None
+
+    mosfet_pin = 12
+    GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(mosfet_pin, GPIO.OUT)
+    element_pwm = GPIO.PWM(mosfet_pin, 20000)
+    element_pwm.start(0)
+
     try:
         while True:
-            current_avg_temp = temp_sensors.read_avg_temperature([True, True,True,True], "c") 
-            
+            current_avg_temp = temp_sensors.read_avg_temperature([True, True, True, True], "c")
             duty_cycle = pid.update(current_avg_temp)
             duty_cycle = max(0, min(100, duty_cycle))
-            
             element_pwm.ChangeDutyCycle(duty_cycle)
-            
-            print(f"Current Model: PID  Avg Temp: {current_avg_temp:.3f}  Set Temp: {baselineTemp:.3f}  Adjusted PWM Duty Cycle: {duty_cycle:.3f}        ", end="\r")
+
+            if logging:
+                if not logger.log(current_avg_temp, duty_cycle):
+                    break
+                overwrite_console(model_type, current_avg_temp, baselineTemp, duty_cycle, 
+                        power=logger.power_history[-1], 
+                        latency=logger.latencies[-1], 
+                        elapsed_time = (time.time() - logger.start_time)/60.0, 
+                        duration_time = duration)
+            else:
+                overwrite_console(model_type, current_avg_temp, baselineTemp, duty_cycle)
+
             time.sleep(1)
+
     except KeyboardInterrupt:
-        print("Stopping...")
-        
+        print("Interrupted by user.")
+    finally:
+        element_pwm.stop()
+        GPIO.cleanup()
+        if logging:
+            logger.summarize()
+        print("System shutdown complete.")
 
 if __name__=="__main__":
     main()
