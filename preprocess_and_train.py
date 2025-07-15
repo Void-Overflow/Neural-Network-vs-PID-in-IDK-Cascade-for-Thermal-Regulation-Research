@@ -37,3 +37,9 @@ model.fit(X_train, y_train, epochs=50, validation_data=(X_test, y_test))
 model.save("neural_network/thermal_controller_model.h5")
 np.save("neural_network/scaler_mean.npy", scaler.mean_)
 np.save("neural_network/scaler_scale.npy", scaler.scale_)
+
+model = tf.keras.models.load_model("neural_network/thermal_controller_model.h5", compile=False)
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
+tflite_model = converter.convert()
+with open("neural_network/thermal_controller_model.tflite", "wb") as f:
+    f.write(tflite_model)
