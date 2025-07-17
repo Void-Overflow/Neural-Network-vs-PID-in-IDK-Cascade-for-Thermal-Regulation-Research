@@ -1,8 +1,9 @@
 #main.py
 
 from sensors import TemperatureSensors
-from pid_controller import PIDController
 from research_logger import ResearchLogger
+from pid_controller import PIDController
+from nn_controller import NeuralNetController
 
 import time
 import RPi.GPIO as GPIO
@@ -33,9 +34,12 @@ def get_user_input():
         print("Invalid input. Using default 30°C.")
         baseline_temp = 16.0
 
-    log_choice = input("Do you want to log the the data during this run? (y/n): ").strip().lower()
-    logging_enabled = log_choice == 'y'
-    
+    if model_choice == "PID":
+        log_choice = input("Do you want to log the the data during this run? (y/n): ").strip().lower()
+        logging_enabled = log_choice == 'y'
+    else:
+        logging_enabled = True
+
     duration = 45.0
     if logging_enabled == True:
         try:
@@ -53,8 +57,10 @@ def main():
     model_type, baselineTemp, logging, duration = get_user_input()
 
     temp_sensors = TemperatureSensors()
-    pid = PIDController(kp=5.0, ki=0.5, kd=1.0, setpoint=baselineTemp)
     logger = ResearchLogger(trial_name=model_type, baseline_temp=baselineTemp, log_interval=1.0, duration_minutes=duration) if logging else None
+    
+    pid = PIDController(kp=5.0, ki=0.5, kd=1.0, setpoint=baselineTemp)
+    NN = NeuralNetController()
 
     mosfet_pin = 12
     GPIO.setwarnings(False)
@@ -66,7 +72,15 @@ def main():
     try:
         while True:
             current_avg_temp = temp_sensors.read_avg_temperature([True, True, True, True], "c")
-            duty_cycle = pid.update(current_avg_temp)
+
+            if model_type.upper() == "PID":
+                duty_cycle = pid.update(current_avg_temp)
+            elif model_type.upper() == "NN":
+                if len(logger.latencies) > 1 and len(logger.power_history) > 1:
+                    duty_cycle = NN.predict(current_avg_temp, logger.latencies[-1], logger.power_history[-1])
+                else:
+                    duty_cycle = pid.update(current_avg_temp)
+            
             duty_cycle = max(0, min(100, duty_cycle))
             element_pwm.ChangeDutyCycle(duty_cycle)
 

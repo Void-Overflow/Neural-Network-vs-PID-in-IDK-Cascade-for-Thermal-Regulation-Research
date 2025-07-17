@@ -15,15 +15,14 @@ class TemperatureSensors:
 
     def read_temperature(self, channel = 0, unit = "c"): #channel - ranges from 0 - 3 (A0 - A3 on ADC), unit of temperature
         sensor = None
-        match channel:
-            case 1:
-                sensor = ADS.P1
-            case 2:
-                sensor = ADS.P2
-            case 3:
-                sensor = ADS.P3
-            case _:
-                sensor = ADS.P0
+        if channel == 1:
+            sensor = ADS.P1
+        elif channel == 2:
+            sensor = ADS.P2
+        elif channel == 3:
+            sensor = ADS.P3
+        else:
+            sensor = ADS.P0
         chan = AnalogIn(self.ads, sensor)
         temperature = 0.0
         if (unit == "f"):
