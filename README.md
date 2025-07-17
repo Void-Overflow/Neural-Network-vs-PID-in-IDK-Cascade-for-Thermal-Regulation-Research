@@ -1,6 +1,54 @@
 # Neural-Network-vs-PID-in-IDK-Cascade-for-Thermal-Regulation-Research
-A Python based application which implements an IDK-Cascade for regulating the temperature of a peltier element at difference confidence intervals, in which the application employs a neural network developed in tflite-micro which switches to traditional PID control at low confidence intervals. This embedded system is written for the Raspberry Pi Zero W and is part of a research paper analyzing the efficiency of IDK-Cascades on embedded systems at varying confidence interevals and in comparision to standalone and traditional methods like employing a NN or using PID based control. 
 
-Python3.7 was used for the trials of this application and all subsequent library versions due to compatibility issues with running tflite-micro on the RPI Zero W's armv6l architecture. Additionally a virtual environment had to be imployed for all pip installations due to hardware and access limitations from Raspberry Pi OS Lite. In order to install the necessary libraries and prerequisites run pip3 install -r ~/requirements.txt for the text file available in the project directory.
+This research study presents a Python-based embedded system for real-time thermal regulation of a Peltier element using an IDK-Cascade control strategy. The system is designed to dynamically switch between a neural network (NN) controller and traditional PID control based on varying confidence intervals. The neural network is trained on data collected from PID-based thermal regulation and deployed using TensorFlow Lite Micro on a Raspberry Pi Zero W (ARMv6l architecture).
 
-This research project was developed through the University of Houston Real Time Systems lab in conjunction with Professor Albert M Cheng and PHD Student Thomas Carroll.
+This work is part of an ongoing research study and paper conducted at the University of Houston’s Real-Time Systems Laboratory under the guidance of Professor Albert M. Cheng and Ph.D. student Thomas Carroll. It aims to analyze and compare the performance and efficiency of IDK-Cascade control in embedded environments across multiple confidence levels based on factors like power consumption, latency, and standard deviation of the temperature over a set 45 minute duration throughout the trials.
+
+## Features
+
+- NN-based thermal controller trained from PID data and deployed via TFLite-Micro
+- IDK-Cascade switching between NN and PID based on confidence thresholds (10%, 30%, 50%, 70%, 90%)
+- Real-time control of Peltier element via PWM on Raspberry Pi Zero W
+- Support for hardware-level data logging including:
+  - Temperature
+  - Duty cycle
+  - Latency
+  - Power draw
+- CSV logging for further training and analysis
+- Optional integration with research trial summary generator
+
+## Hardware Setup
+
+To enhance reproducibility and transparency, this repository includes detailed hardware documentation:
+
+- `hardware_documentation/schematic/`: Electrical schematic of the system
+- `hardware_documentation/images/`: Photographs of the embedded setup
+- `hardware_documentation/operational_video/`: Real-time video demonstration
+
+## Requirements
+
+Due to compatibility limitations of TensorFlow-Lite Micro on Raspberry Pi Zero W, this project uses:
+
+- Python 3.7
+- A lightweight virtual environment (`venv`)
+- TensorFlow Lite Micro (`tflite-micro-runtime`)
+- Adafruit drivers for I²C-based sensors (ADS1115, INA219)
+
+To install all necessary libraries, activate your Python 3.7 environment and run:
+
+``` bash
+pip3 install -r requirements.txt
+```
+# Usage
+Run the main application:
+```bash
+python main.py
+```
+
+# License
+This project's is licensed under the MIT License, while it's image and video documentation is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.
+
+# Acknowledgments
+Developed at the University of Houston Real-Time Systems Lab
+Supervisor: Prof. Albert M. Cheng
+Collaborator: Thomas P. Carroll, Ph.D. Student
