@@ -60,7 +60,12 @@ def main():
     logger = ResearchLogger(trial_name=model_type, baseline_temp=baselineTemp, log_interval=1.0, duration_minutes=duration) if logging else None
     
     pid = PIDController(kp=5.0, ki=0.5, kd=1.0, setpoint=baselineTemp)
-    NN_Path = "neural_networks/" + model_type + "/"
+    
+    NN_Path = None
+    if model_type != "PID":
+         NN_Path = "neural_networks/" + model_type + "/"
+    else:
+        NN_Path = "neural_networks/NN1/"
     NN = NeuralNetController(NN_Path)
 
     mosfet_pin = 12
