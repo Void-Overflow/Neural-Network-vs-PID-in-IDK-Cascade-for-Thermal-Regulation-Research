@@ -25,6 +25,7 @@ class ResearchLogger:
         self.ina = INA219(i2c)
 
         base_folder = "research_data"
+
         if trial_name.startswith("IDK_"):
             self.folder_path = os.path.join(base_folder, "IDK_CASCADE", trial_name)
         else:
@@ -38,11 +39,14 @@ class ResearchLogger:
 
         with open(self.raw_data_path, "w", newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(["Timestamp", "Temperature (C)", "Duty Cycle (%)", "Latency (ms)", "Power (W)"])
+            if trial_name.startswith("IDK_"):
+                writer.writerow(["Timestamp", "Temperature (C)", "Duty Cycle (%)", "Latency (ms)", "Power (W)", "Model", "Confidence (%)"])
+            else:
+                writer.writerow(["Timestamp", "Temperature (C)", "Duty Cycle (%)", "Latency (ms)", "Power (W)"])
 
         self.start_time = time.time()
 
-    def log(self, temperature, duty_cycle):
+    def log(self, temperature, duty_cycle, confidence=None, model=None):
         if self.should_stop():
             return False
 
@@ -70,20 +74,32 @@ class ResearchLogger:
         # Append to CSV
         with open(self.raw_data_path, "a", newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([
-                timestamp,
-                round(temperature, 2),
-                round(duty_cycle, 2),
-                round(latency, 3),
-                round(avg_power, 3)
-            ])
+            if trial_name.startswith("IDK_") and confidence is not None and model is not None:
+                writer.writerow([
+                    timestamp,
+                    round(temperature, 2),
+                    round(duty_cycle, 2),
+                    round(latency, 3),
+                    round(avg_power, 3),
+                    model,
+                    round(confidence, 3),
+                ])
+
+            else:
+                writer.writerow([
+                    timestamp,
+                    round(temperature, 2),
+                    round(duty_cycle, 2),
+                    round(latency, 3),
+                    round(avg_power, 3)
+                ])
 
         return True
 
     def should_stop(self):
         return (time.time() - self.start_time) >= self.duration_seconds
 
-    def summarize(self):
+    def summarize(self, stages=None):
         total_time = time.time() - self.start_time
         std_temp = statistics.stdev(self.temp_history) if len(self.temp_history) > 1 else 0
         avg_latency = statistics.mean(self.latencies) if self.latencies else 0
@@ -97,24 +113,51 @@ class ResearchLogger:
 
         with open(self.summary_path, "w", newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([
-                "Baseline Temp (°C)",
-                "Trial Duration (min)",
-                "Std Dev (Temp)",
-                "Avg Latency (ms)",
-                "Avg Power (W)",
-                "Avg Duty (%)",
-                "Efficiency Score"
-            ])
-            writer.writerow([
-                round(self.baseline_temp, 2),
-                round(total_time / 60, 2),
-                round(std_temp, 3),
-                round(avg_latency, 3),
-                round(avg_power, 3),
-                round(avg_duty, 3),
-                round(efficiency_score, 6)
-            ])
+            if self.trial_name.startswith("IDK_") and stages is not None:
+                 writer.writerow([
+                    "Baseline Temp (°C)",
+                    "Trial Duration (min)",
+                    "Std Dev (Temp)",
+                    "Avg Latency (ms)",
+                    "Avg Power (W)",
+                    "Avg Duty (%)",
+                    "# PID",
+                    "# NN1(fast)",
+                    "# NN2(slow)",
+                    "Efficiency Score"
+                ])
+                writer.writerow([
+                    round(self.baseline_temp, 2),
+                    round(total_time / 60, 2),
+                    round(std_temp, 3),
+                    round(avg_latency, 3),
+                    round(avg_power, 3),
+                    round(avg_duty, 3),
+                    stages["PID"],
+                    stages["NN_FAST"],
+                    stages["NN_SLOW"],
+                    round(efficiency_score, 6)
+                ])
+
+            else:
+                writer.writerow([
+                    "Baseline Temp (°C)",
+                    "Trial Duration (min)",
+                    "Std Dev (Temp)",
+                    "Avg Latency (ms)",
+                    "Avg Power (W)",
+                    "Avg Duty (%)",
+                    "Efficiency Score"
+                ])
+                writer.writerow([
+                    round(self.baseline_temp, 2),
+                    round(total_time / 60, 2),
+                    round(std_temp, 3),
+                    round(avg_latency, 3),
+                    round(avg_power, 3),
+                    round(avg_duty, 3),
+                    round(efficiency_score, 6)
+                ])
 
         print(f"\nTrial '{self.trial_name}' complete.")
         print(f"Summary saved to: {self.summary_path}")

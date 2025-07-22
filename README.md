@@ -1,8 +1,17 @@
 # Neural-Network-vs-PID-in-IDK-Cascade-for-Thermal-Regulation-Research
 
-This research study presents a Python-based embedded system for real-time thermal regulation of a Peltier element using an IDK-Cascade control strategy. The system is designed to dynamically switch between a neural network (NN) controller and traditional PID control based on varying confidence intervals. The neural network is trained on data collected from PID-based thermal regulation and deployed using TensorFlow Lite Micro on a Raspberry Pi Zero W (ARMv6l architecture).
+This research study presents a Python-based embedded system for real-time thermal regulation of a Peltier element using an IDK-Cascade control strategy. The system is designed to dynamically switch between multiple neural networks (NNs) and a traditional PID controller based on varying confidence intervals.
 
-This work is part of an ongoing research study and paper conducted at the University of Houston’s Real-Time Systems Laboratory under the guidance of Professor Albert M. Cheng and Ph.D. student Thomas Carroll. It aims to analyze and compare the performance and efficiency of IDK-Cascade control in embedded environments across multiple confidence levels based on factors like power consumption, latency, and standard deviation of the temperature over a set 45 minute duration throughout the trials.
+Two neural networks are employed in the cascade:
+
+- **NN1 (Fast):** A lightweight, reactive network designed to make rapid duty cycle predictions, favoring speed and responsiveness over stability.
+- **NN2 (Slow):** A deeper, more conservative network optimized for smoother temperature regulation and reduced power draw, at the cost of slightly higher computational overhead.
+
+- **PID Controller:** Serves as a fallback deterministic stage when both NNs fall below confidence thresholds or when highly stable behavior is needed.
+
+Both networks are trained on datasets collected from PID-controlled thermal regulation and deployed using TensorFlow Lite Micro on a Raspberry Pi Zero W (ARMv6l architecture). The IDK-Cascade dynamically routes control between NN1, NN2, and PID depending on their confidence scores, balancing latency, stability, and power efficiency.
+
+This work is part of an ongoing research study and paper conducted at the University of Houston’s Real-Time Systems Laboratory under the guidance of Professor Albert M. Cheng and Ph.D. student Thomas P. Carroll. It aims to analyze and compare the performance and efficiency of IDK-Cascade control in embedded environments across multiple confidence levels based on factors like power consumption, latency, and standard deviation of the temperature over a set 45 minute duration throughout the trials.
 
 ## Features
 
@@ -15,7 +24,6 @@ This work is part of an ongoing research study and paper conducted at the Univer
   - Latency
   - Power draw
 - CSV logging for further training and analysis
-- Optional integration with research trial summary generator
 
 ## Hardware Setup
 

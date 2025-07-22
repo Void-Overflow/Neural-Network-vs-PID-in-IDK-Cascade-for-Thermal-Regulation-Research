@@ -4,19 +4,22 @@ from sensors import TemperatureSensors
 from research_logger import ResearchLogger
 from pid_controller import PIDController
 from nn_controller import NeuralNetController
+from idk_cascade import IDKCascade
 
 import time
 import RPi.GPIO as GPIO
 import sys
 
-def overwrite_console(model_type, avg_temp, baseline_temp, duty_cycle, power=None, latency=None, elapsed_time=None, duration_time=None):
-    sys.stdout.write("\033[F" * (2 if power is not None else 1))  # Move cursor up 3 lines if logging
+def overwrite_console(model_type, avg_temp, baseline_temp, duty_cycle, power=None, latency=None, elapsed_time=None, duration_time=None, confidence=None, model=None, stage_breakdown=None):
+    sys.stdout.write("\033[F" * (3 if confidence is not None else 2 if power is not None else 1)) # Move cursor up 3 lines if logging
     sys.stdout.flush()
 
     sys.stdout.write(f"\rCurrent Model: {model_type}  Avg Temp: {avg_temp:.2f}°C  "
-                     f"Set Temp: {baseline_temp:.2f}°C  PWM Duty: {duty_cycle:.2f}%     \n")
+                     f"Set Temp: {baseline_temp:.2f}°C  PWM Duty: {duty_cycle:.2f}%      \n")
     if power is not None and latency is not None:
-        sys.stdout.write(f"Power: {power:.3f} W  Latency: {latency:.2f} ms  Time Elapsed: {elapsed_time:.2f} min / {duration_time:.2f} min    \n")
+        sys.stdout.write(f"Power: {power:.3f} W  Latency: {latency:.2f} ms  Time Elapsed: {elapsed_time:.2f} min / {duration_time:.2f} min       \n")
+    if confidence is not None and model is not None:
+        sys.stdout.write(f"Current Model: {model}  Model Confidence: {confidence}%  Model Stage Occurences: PID-{stage_breakdown['PID']} NN1(fast)-{stage_breakdown['NN_FAST']} NN2(slow)-{stage_breakdown['NN_SLOW']}        \n")
     sys.stdout.flush()
 
 
@@ -61,12 +64,16 @@ def main():
     
     pid = PIDController(kp=5.0, ki=0.5, kd=1.0, setpoint=baselineTemp)
     
-    NN_Path = None
-    if model_type != "PID":
-         NN_Path = "neural_networks/" + model_type + "/"
-    else:
-        NN_Path = "neural_networks/NN1/"
-    NN = NeuralNetController(NN_Path)
+    NN = None
+    cascade = None 
+
+    if model_type.startswith("IDK_"):
+        conf_value = float(model_type.split("_")[1])
+        cascade = IDKCascade(baseline_temp=baselineTemp, conf_threshold=conf_value)
+    
+    elif model_type.startswith("NN"):
+        NN_Path = "neural_networks/" + model_type + "/"
+        NN = NeuralNetController(NN_Path)
 
     mosfet_pin = 12
     GPIO.setwarnings(False)
@@ -78,26 +85,44 @@ def main():
     try:
         while True:
             current_avg_temp = temp_sensors.read_avg_temperature([True, True, True, True], "c")
+            source, confidence = model_type, None
 
             if model_type.upper() == "PID":
                 duty_cycle = pid.update(current_avg_temp)
+
             elif model_type.startswith("NN"):
                 if len(logger.latencies) > 1 and len(logger.power_history) > 1:
                     duty_cycle = NN.predict(current_avg_temp, logger.latencies[-1], logger.power_history[-1])
                 else:
                     duty_cycle = pid.update(current_avg_temp)
-            
+
+            elif model_type.startswith("IDK_"):
+                if len(logger.latencies) > 1 and len(logger.power_history) > 1:
+                    duty_cycle, source, confidence = cascade.decide(current_avg_temp, logger.latencies[-1], logger.power_history[-1])
+                else:
+                    duty_cycle = pid.update(current_avg_temp)
+
             duty_cycle = max(0, min(100, duty_cycle))
             element_pwm.ChangeDutyCycle(duty_cycle)
 
             if logging:
-                if not logger.log(current_avg_temp, duty_cycle):
+                if not logger.log(current_avg_temp, duty_cycle, confidence, source):
                     break
-                overwrite_console(model_type, current_avg_temp, baselineTemp, duty_cycle, 
-                        power=logger.power_history[-1], 
-                        latency=logger.latencies[-1], 
-                        elapsed_time = (time.time() - logger.start_time)/60.0, 
-                        duration_time = duration)
+                if confidence is not None:
+                    overwrite_console(model_type, current_avg_temp, baselineTemp, duty_cycle, 
+                            power=logger.power_history[-1], 
+                            latency=logger.latencies[-1], 
+                            elapsed_time = (time.time() - logger.start_time)/60.0, 
+                            duration_time = duration,
+                            confidence = confidence,
+                            model=source,
+                            stage_breakdown=cascade.get_stage_breakdown())
+                else:
+                    overwrite_console(model_type, current_avg_temp, baselineTemp, duty_cycle, 
+                            power=logger.power_history[-1], 
+                            latency=logger.latencies[-1], 
+                            elapsed_time = (time.time() - logger.start_time)/60.0, 
+                            duration_time = duration)
             else:
                 overwrite_console(model_type, current_avg_temp, baselineTemp, duty_cycle)
 
@@ -109,7 +134,7 @@ def main():
         element_pwm.stop()
         GPIO.cleanup()
         if logging:
-            logger.summarize()
+            logger.summarize(stages=cascade.get_stage_breakdown())
         print("System shutdown complete.")
 
 if __name__=="__main__":
