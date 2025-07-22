@@ -1,0 +1,54 @@
+# Neural-Network-vs-PID-in-IDK-Cascade-for-Thermal-Regulation-Research
+
+This research study presents a Python-based embedded system for real-time thermal regulation of a Peltier element using an IDK-Cascade control strategy. The system is designed to dynamically switch between a neural network (NN) controller and traditional PID control based on varying confidence intervals. The neural network is trained on data collected from PID-based thermal regulation and deployed using TensorFlow Lite Micro on a Raspberry Pi Zero W (ARMv6l architecture).
+
+This work is part of an ongoing research study and paper conducted at the University of Houston’s Real-Time Systems Laboratory under the guidance of Professor Albert M. Cheng and Ph.D. student Thomas Carroll. It aims to analyze and compare the performance and efficiency of IDK-Cascade control in embedded environments across multiple confidence levels based on factors like power consumption, latency, and standard deviation of the temperature over a set 45 minute duration throughout the trials.
+
+## Features
+
+- NN-based thermal controller trained from PID data and deployed via TFLite-Micro
+- IDK-Cascade switching between NN and PID based on confidence thresholds (10%, 30%, 50%, 70%, 90%)
+- Real-time control of Peltier element via PWM on Raspberry Pi Zero W
+- Support for hardware-level data logging including:
+  - Temperature
+  - Duty cycle
+  - Latency
+  - Power draw
+- CSV logging for further training and analysis
+- Optional integration with research trial summary generator
+
+## Hardware Setup
+
+To enhance reproducibility and transparency, this repository includes detailed hardware documentation:
+
+- `hardware_documentation/schematic/`: Electrical schematic of the system
+- `hardware_documentation/images/`: Photographs of the embedded setup
+- `hardware_documentation/operational_video/`: Real-time video demonstration
+
+## Requirements
+
+Due to compatibility limitations of TensorFlow-Lite Micro on Raspberry Pi Zero W, this project uses:
+
+- Python 3.7
+- A lightweight virtual environment (`venv`)
+- TensorFlow Lite Micro (`tflite-micro-runtime`)
+- Adafruit drivers for I²C-based sensors (ADS1115, INA219)
+
+To install all necessary libraries, activate your Python 3.7 environment and run:
+
+``` bash
+pip3 install -r requirements.txt
+```
+# Usage
+Run the main application:
+```bash
+python main.py
+```
+
+# License
+This project's is licensed under the MIT License, while it's image and video documentation is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.
+
+# Acknowledgments
+Developed at the University of Houston Real-Time Systems Lab
+Supervisor: Prof. Albert M. Cheng
+Collaborator: Thomas P. Carroll, Ph.D. Student
