@@ -1,0 +1,2 @@
+Baseline Temp (°C),Trial Duration (min),Std Dev (Temp),Avg Latency (ms),Avg Power (W),Avg Duty (%),# PID,# NN1(fast),# NN2(slow),Efficiency Score
+16.0,45.0,1.255,13.713,17.208,36.377,287,301,1647,0.003378
