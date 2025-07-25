@@ -1,16 +1,18 @@
+#idk_cascade.py
+
 import numpy as np
 import time
 from pid_controller import PIDController
 from nn_controller import NeuralNetController
 
 class IDKCascade:
-    def __init__(self, baseline_temp=15.9, conf_threshold=0.3, deadline=1.5):
+    def __init__(self, baseline_temp=16.0, conf_threshold=0.5, deadline=1.5):
         self.baseline_temp = baseline_temp
         self.conf_threshold = conf_threshold
         self.deadline = deadline
         self.nn_fast = NeuralNetController("neural_networks/NN1/")
         self.nn_slow = NeuralNetController("neural_networks/NN2/")
-        self.pid = PIDController(kp=9.5, ki=1.0, kd=2.0, setpoint=baseline_temp)
+        self.pid = PIDController(kp=7.5, ki=0.6, kd=1.0, setpoint=baseline_temp)
         self.P_nn1, self.P_nn2, self.P_pid = 0.3, 0.05, 0.05
         self.stage_counts = {"NN_FAST": 0, "NN_SLOW": 0, "PID": 0}
         self.prev_confidence = 0.5
@@ -18,12 +20,14 @@ class IDKCascade:
         self.pid_run_count = 0
         self.cycle_count = 0
         self.pid_cycle_count = 0
-        self.max_pid_run = 5  # Exit PID after ~10s
-        self.pid_cycle_limit = 40  # PID every ~60s for ~5%
+        self.max_pid_run = 5  # Exit PID after ~6s
+        self.pid_cycle_limit = 80  # PID every ~97s
         self.dwell_counter = 0
         self.min_dwell_cycles = 6  # Prevent oscillation
         self.hysteresis_margin = 0.1  # Stabilize transitions
-        self.temp_tolerance = 2.0
+        self.temp_tolerance = 4.0  # Extended for NN_SLOW
+        self.temp_deadband = 0.5  # Reduce sensitivity
+        self.pid_stabilizer_temp = baseline_temp - 0.5  # Force PID at baseline - .5
         self.order = [
             {"name": "NN_FAST", "model": self.nn_fast},
             {"name": "NN_SLOW", "model": self.nn_slow},
@@ -31,7 +35,6 @@ class IDKCascade:
         ]
 
     def optimize_order(self):
-        """Sort controllers by P_i"""
         return sorted(self.order, key=lambda x: {
             "NN_FAST": self.P_nn1,
             "NN_SLOW": self.P_nn2,
@@ -43,25 +46,27 @@ class IDKCascade:
         if stage == "NN_FAST":
             self.P_nn1 = (1 - decay) * self.P_nn1 + decay * success
             if temp_error < self.temp_tolerance:
-                self.P_nn2 += 0.15  # Boost NN_SLOW
+                self.P_nn2 += 0.4  # Stronger NN_SLOW boost
         elif stage == "NN_SLOW":
             self.P_nn2 = (1 - decay) * self.P_nn2 + decay * success
         else:
             self.P_pid = (1 - decay) * self.P_pid + decay * success
-        if temp_error > 0.5:  # Boost NN_FAST for spikes
+        if temp_error > 5.0:  # NN_FAST for extreme errors
             self.P_nn1 += 0.05
         self.P_nn1 = np.clip(self.P_nn1, 0.05, 0.95)
         self.P_nn2 = np.clip(self.P_nn2, 0.05, 0.95)
-        self.P_pid = np.clip(self.P_pid, 0.05, 0.15)  # Minimal PID
+        self.P_pid = np.clip(self.P_pid, 0.05, 0.06)  # Minimal PID
         self.order = self.optimize_order()
 
     def get_confidence(self, predicted_duty, current_temp, power, latency, is_pid=False):
         temp_error = abs(current_temp - self.baseline_temp)
         if is_pid:
             return 0.2
-        if temp_error < 1.0:
-            temp_conf = 0.95 + np.random.uniform(-0.1, 0.1)  # NN_SLOW
-        elif temp_error < 1.5:
+        if temp_error < self.temp_deadband:  # Deadband to reduce sensitivity
+            temp_conf = 0.95 + np.random.uniform(-0.05, 0.05)
+        elif temp_error < 4.0:
+            temp_conf = 0.95 + np.random.uniform(-0.1, 0.1)  # NN_SLOW up to ±4°C
+        elif temp_error < 6.0:
             temp_conf = 0.85 + np.random.uniform(-0.2, 0.2)  # NN_SLOW
         else:
             temp_conf = 1.0 + np.random.uniform(-0.2, 0.2)  # NN_FAST
@@ -76,12 +81,24 @@ class IDKCascade:
         return np.clip(base_conf + noise, 0.0, 1.0)
 
     def decide(self, current_temp, latency, power):
-        """Selects best model. Also incorporates hysteresis, deadlines, and PID limits."""
+        """IDK-Cascade model selection with hysteresis, deadlines, PID limits, and stabilizer at ≤ baseline - 0.5."""
         start = time.time()
         temp_error = abs(current_temp - self.baseline_temp)
         self.cycle_count += 1
         self.dwell_counter += 1
         self.pid_cycle_count += 1
+
+        # Force PID at ≤baseline - 0.5°C to prevent overshooting
+        if current_temp <= self.pid_stabilizer_temp:
+            self.stage_counts["PID"] += 1
+            self.dwell_counter = 0
+            self.pid_cycle_count = 0
+            duty_pid = self.pid.update(current_temp)
+            conf_pid = self.get_confidence(duty_pid, current_temp, power, latency, is_pid=True)
+            self.update_probabilities("PID", np.exp(-temp_error / 1.0), temp_error)
+            self.prev_confidence = conf_pid
+            self.pid_run_count = 1  # Single cycle, avoid sticking
+            return duty_pid, "PID", conf_pid * 100
 
         if self.last_controller == "PID":
             self.pid_run_count += 1
