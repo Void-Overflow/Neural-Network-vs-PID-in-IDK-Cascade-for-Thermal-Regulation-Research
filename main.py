@@ -15,16 +15,16 @@ def overwrite_console(model_type, avg_temp, baseline_temp, duty_cycle, power=Non
     sys.stdout.flush()
 
     sys.stdout.write(f"\rCurrent Model: {model_type}  Avg Temp: {avg_temp:.2f}°C  "
-                     f"Set Temp: {baseline_temp:.2f}°C  PWM Duty: {duty_cycle:.2f}%      \n")
+                     f"Set Temp: {baseline_temp:.2f}°C  PWM Duty: {duty_cycle:.2f}%                       \n")
     if power is not None and latency is not None:
-        sys.stdout.write(f"Power: {power:.3f} W  Latency: {latency:.2f} ms  Time Elapsed: {elapsed_time:.2f} min / {duration_time:.2f} min       \n")
+        sys.stdout.write(f"Power: {power:.3f} W  Latency: {latency:.2f} ms  Time Elapsed: {elapsed_time:.2f} min / {duration_time:.2f} min                         \n")
     if confidence is not None and model is not None:
-        sys.stdout.write(f"Current Model: {model}  Model Confidence: {confidence}%  Model Stage Occurences: PID-{stage_breakdown['PID']} NN1(fast)-{stage_breakdown['NN_FAST']} NN2(slow)-{stage_breakdown['NN_SLOW']}        \n")
+        sys.stdout.write(f"Current Model: {model}  Model Confidence: {confidence:.3f}%  Model Stage Occurences: PID-{stage_breakdown['PID']} NN1(fast)-{stage_breakdown['NN_FAST']} NN2(slow)-{stage_breakdown['NN_SLOW']}                                                \n")
     sys.stdout.flush()
 
 
 def get_user_input():
-    print("Available Modes: PID, NN1 (fast), NN2 (slow), IDK_0.1, IDK_0.3, IDK_0.5, IDK_0.7, IDK_0.9")
+    print("Available Modes: PID, NN1 (fast), NN2 (slow), IDK_0.3, IDK_0.5, IDK_0.7")
     model_choice = input("Enter control model: ").strip().upper()
 
     if not (model_choice == "PID" or model_choice.startswith("NN") or model_choice.startswith("IDK_")):

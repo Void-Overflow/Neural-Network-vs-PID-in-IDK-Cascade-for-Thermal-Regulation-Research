@@ -16,7 +16,7 @@ This work is part of an ongoing research study and paper conducted at the Univer
 ## Features
 
 - NN-based thermal controller trained from PID data and deployed via TFLite-Micro
-- IDK-Cascade switching between NN and PID based on confidence thresholds (10%, 30%, 50%, 70%, 90%)
+- IDK-Cascade switching between NN and PID based on confidence thresholds (30%, 50%, 70%)
 - Real-time control of Peltier element via PWM on Raspberry Pi Zero W
 - Support for hardware-level data logging including:
   - Temperature

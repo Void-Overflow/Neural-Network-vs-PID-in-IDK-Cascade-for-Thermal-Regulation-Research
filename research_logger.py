@@ -74,7 +74,7 @@ class ResearchLogger:
         # Append to CSV
         with open(self.raw_data_path, "a", newline='') as f:
             writer = csv.writer(f)
-            if trial_name.startswith("IDK_") and confidence is not None and model is not None:
+            if self.trial_name.startswith("IDK_") and confidence is not None and model is not None:
                 writer.writerow([
                     timestamp,
                     round(temperature, 2),
@@ -114,7 +114,7 @@ class ResearchLogger:
         with open(self.summary_path, "w", newline='') as f:
             writer = csv.writer(f)
             if self.trial_name.startswith("IDK_") and stages is not None:
-                 writer.writerow([
+                writer.writerow([
                     "Baseline Temp (°C)",
                     "Trial Duration (min)",
                     "Std Dev (Temp)",
