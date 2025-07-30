@@ -57,6 +57,6 @@ python main.py
 This project's is licensed under the MIT License, while it's image and video documentation is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.
 
 # Acknowledgments
-Developed at the University of Houston Real-Time Systems Lab
-Supervisor: Prof. Albert M. Cheng
-Collaborator: Thomas P. Carroll, Ph.D. Student
+Developed at the University of Houston Real-Time Systems Lab with
+Prof. Albert M. Cheng
+Thomas P. Carroll, Ph.D. Student
