@@ -11,7 +11,10 @@ Two neural networks are employed in the cascade:
 
 Both networks are trained on datasets collected from PID-controlled thermal regulation and deployed using TensorFlow Lite Micro on a Raspberry Pi Zero W (ARMv6l architecture). The IDK-Cascade dynamically routes control between NN1, NN2, and PID depending on their confidence scores, balancing latency, stability, and power efficiency.
 
-This work is part of an ongoing research study and paper conducted at the University of Houston’s Real-Time Systems Laboratory under the guidance of Professor Albert M. Cheng and Ph.D. student Thomas P. Carroll. It aims to analyze and compare the performance and efficiency of IDK-Cascade control in embedded environments across multiple confidence levels based on factors like power consumption, latency, and standard deviation of the temperature over a set 45 minute duration throughout the trials.
+This work is part of a research study and paper conducted at the University of Houston’s Real-Time Systems Laboratory under the guidance of Professor Albert M. Cheng and Ph.D. student Thomas P. Carroll. It aims to analyze and compare the performance and efficiency of IDK-Cascade control in embedded environments across multiple confidence levels based on factors like power consumption, latency, and standard deviation of the temperature over a set 45 minute duration throughout the trials.
+
+This paper is being submitted to be presented at the Real-Time Systems Symposium (RTSS) Conference in Boston in December 2025 as a WiP research paper. The research paper is available in this GitHub repository as a PDF as well.
+- `publication/Work_in_Progress__Evaluating_Stage_Prioritized_IDK_Cascades_for_Thermal_Regulation_in_Embedded_Systems.pdf`: PDF document of research paper conducted over this study which is going to be submitted to RTSS.
 
 ## Features
 
